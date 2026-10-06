@@ -1,0 +1,122 @@
+[
+ {
+  "step": 0,
+  "minutes": 0.7,
+  "reward": 13.326295852661133,
+  "episode_length": 793.546875
+ },
+ {
+  "step": 31621120,
+  "minutes": 3.5,
+  "reward": 10.901689529418945,
+  "episode_length": 872.7890625
+ },
+ {
+  "step": 63242240,
+  "minutes": 5.89,
+  "reward": 13.087173461914062,
+  "episode_length": 896.34375
+ },
+ {
+  "step": 94863360,
+  "minutes": 8.02,
+  "reward": 11.478322982788086,
+  "episode_length": 867.984375
+ },
+ {
+  "step": 126484480,
+  "minutes": 10.15,
+  "reward": 12.772820472717285,
+  "episode_length": 891.5703125
+ },
+ {
+  "step": 158105600,
+  "minutes": 12.28,
+  "reward": 14.091117858886719,
+  "episode_length": 893.53125
+ },
+ {
+  "step": 189726720,
+  "minutes": 14.4,
+  "reward": 14.763916015625,
+  "episode_length": 899.5625
+ },
+ {
+  "step": 221347840,
+  "minutes": 16.52,
+  "reward": 12.617630004882812,
+  "episode_length": 870.7890625
+ },
+ {
+  "step": 252968960,
+  "minutes": 18.65,
+  "reward": 13.215665817260742,
+  "episode_length": 867.2265625
+ },
+ {
+  "step": 284590080,
+  "minutes": 20.77,
+  "reward": 10.27886962890625,
+  "episode_length": 832.8671875
+ },
+ {
+  "step": 316211200,
+  "minutes": 22.89,
+  "reward": 12.432535171508789,
+  "episode_length": 874.8359375
+ },
+ {
+  "step": 347832320,
+  "minutes": 25.01,
+  "reward": 12.751238822937012,
+  "episode_length": 881.25
+ },
+ {
+  "step": 379453440,
+  "minutes": 27.13,
+  "reward": 14.878520965576172,
+  "episode_length": 876.28125
+ },
+ {
+  "step": 411074560,
+  "minutes": 29.25,
+  "reward": 11.928215026855469,
+  "episode_length": 873.3515625
+ },
+ {
+  "step": 442695680,
+  "minutes": 31.36,
+  "reward": 15.74095344543457,
+  "episode_length": 843.421875
+ },
+ {
+  "step": 474316800,
+  "minutes": 33.48,
+  "reward": 13.864869117736816,
+  "episode_length": 872.53125
+ },
+ {
+  "step": 505937920,
+  "minutes": 35.6,
+  "reward": 14.050115585327148,
+  "episode_length": 852.5078125
+ },
+ {
+  "step": 537559040,
+  "minutes": 37.71,
+  "reward": 12.849647521972656,
+  "episode_length": 899.3515625
+ },
+ {
+  "step": 569180160,
+  "minutes": 39.83,
+  "reward": 15.493224143981934,
+  "episode_length": 870.890625
+ },
+ {
+  "step": 600801280,
+  "minutes": 41.94,
+  "reward": 13.498015403747559,
+  "episode_length": 909.7578125
+ }
+]

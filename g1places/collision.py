@@ -88,8 +88,19 @@ class Grid:
         # soft preference for the middle of corridors
         cost_extra = np.clip(1.0 - dist, 0, None) * 4.0
         s, g = self.to_ij(start_xy), self.to_ij(goal_xy)
-        if not (free[s] and free[g]):
-            raise ValueError(f"start free={free[s]} goal free={free[g]} (clearance {clearance})")
+        free_ij = np.argwhere(free)
+
+        def snap(ij, what):
+            # a robot standing at a shelf is inside the clearance band: start from the
+            # nearest free cell, if there is one within a metre
+            if free[ij]:
+                return ij
+            k = np.argmin(np.linalg.norm(free_ij - np.array(ij), axis=1))
+            if np.linalg.norm(free_ij[k] - np.array(ij)) * self.cell > 1.0:
+                raise ValueError(f"{what} is more than 1 m from free space (clearance {clearance})")
+            return tuple(int(x) for x in free_ij[k])
+
+        s, g = snap(s, "start"), snap(g, "goal")
         moves = [(1, 0, 1), (-1, 0, 1), (0, 1, 1), (0, -1, 1),
                  (1, 1, 1.414), (1, -1, 1.414), (-1, 1, 1.414), (-1, -1, 1.414)]
         openq = [(0.0, s)]

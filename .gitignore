@@ -5,3 +5,10 @@ scratch/
 third_party/
 .DS_Store
 MUJOCO_LOG.TXT
+.venv-train/
+runs/smoke/
+runs/*.log
+runs/*/params.pkl
+!runs/payload10_1B/params.pkl
+!runs/payload0_1B/params.pkl
+data/

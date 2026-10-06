@@ -1,0 +1,16 @@
+# training stack (GPU box adds the CUDA plugin: jax[cuda12]==0.9.2)
+# jax is pinned below 0.10: brax 0.14.2 still calls jax.device_put_replicated
+jax==0.9.2
+jaxlib==0.9.2
+brax==0.14.2
+playground==0.2.0
+mujoco==3.15.0
+mujoco-mjx==3.15.0
+mujoco-warp==3.15.0
+warp-lang==1.18.0
+ml-collections==1.1.0
+etils==1.14.0
+numpy==2.5.3
+flax==0.12.6
+optax==0.2.8
+orbax-checkpoint==0.12.6

@@ -2,6 +2,7 @@
 
     python scripts/make_media.py gifs
     python scripts/make_media.py method
+    python scripts/make_media.py carry
 """
 
 from __future__ import annotations
@@ -54,6 +55,23 @@ def gifs():
         iio.imwrite(MEDIA / f"{name}-poster.jpg", iio.imread(frames / f"{start:05d}.png"), quality=88)
 
 
+def carry():
+    """Pick and place excerpts of the warehouse carry demo."""
+    import numpy as np
+    z = np.load(ROOT / "data" / "linden" / "carry_demo.npz", allow_pickle=True)
+    labels = [str(x) for x in z["labels"]]
+    frames = ROOT / "data" / "linden" / "carry_frames"
+    for name, phase, lead in [("pick", "reach", 15), ("place", "lower", 60)]:
+        start = labels.index(phase) - lead
+        gif(frames, MEDIA / f"linden_carry_{name}.gif", start, 6.0, width=720)
+        loop = MEDIA / f"linden_carry_{name}-loop.mp4"
+        ffmpeg("-start_number", start, "-framerate", SRC_FPS, "-i", frames / "%05d.png",
+               "-frames:v", int(LOOP_SECONDS * SRC_FPS), "-c:v", "libx264", "-crf", 26,
+               "-pix_fmt", "yuv420p", "-movflags", "+faststart", loop)
+        print(f"wrote {loop.name} ({loop.stat().st_size / 1e6:.2f} MB)")
+        iio.imwrite(MEDIA / f"linden_carry_{name}-poster.jpg", iio.imread(frames / f"{start + 40:05d}.png"), quality=88)
+
+
 def method(name: str = "linden", frame: int = 470):
     """Three stages of one chase-camera frame: splat alone, MuJoCo passes, composite."""
     from g1places.composite import Compositor
@@ -85,4 +103,4 @@ def method(name: str = "linden", frame: int = 470):
 
 
 if __name__ == "__main__":
-    {"gifs": gifs, "method": method}[sys.argv[1]]()
+    {"gifs": gifs, "method": method, "carry": carry}[sys.argv[1]]()

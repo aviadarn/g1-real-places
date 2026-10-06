@@ -1,6 +1,13 @@
-# A Unitree G1 walking through real places, on a laptop
+# A Unitree G1 in real places: walking, then carrying a box
 
-A Unitree G1 humanoid walks through two real-world 3D Gaussian-splat captures: a graffiti tunnel in London and a pallet-rack warehouse in New Jersey. It is recorded from three synchronised cameras: third person, head-camera RGB and head-camera depth.
+A Unitree G1 humanoid in two real-world 3D Gaussian-splat captures: a graffiti tunnel in London and a pallet-rack warehouse in New Jersey. Every clip is recorded from three synchronised cameras: third person, head-camera RGB and head-camera depth.
+
+- **[Part 1](#part-1-walking-through-real-places-0)** walks it through both scans with Unitree's stock policy, on a MacBook, for $0.
+- **[Part 2](#part-2-carrying-a-box-127-of-gpu)** trains a walking policy that carries a box. Unitree's stock policy falls in 50 of 50 trials once 2 kg is held at the palms. The retrained one completes 50 of 50 up to 8 kg, and it picks a carton off one real pallet stack and sets it on another. Training cost $1.27.
+
+![Pick and place in the Linden warehouse scan: third person, head RGB, head depth](media/linden_carry_pick.gif)
+
+# Part 1: walking through real places ($0)
 
 The setup this copies is NVIDIA Isaac Sim, Isaac Lab, an RTX GPU and Niantic Spatial's Places Library ([Tim Martin's post](https://www.linkedin.com/posts/tim-martin-176471250_nvidiaomniverse-isaacsim-isaaclab-ugcPost-7512778691396018176-J65_/)). This version runs on an Apple-silicon MacBook with no NVIDIA GPU and no cloud. It costs $0:
 
@@ -66,7 +73,7 @@ The two free samples don't agree with each other or with their own metadata. Eac
 - Leake's scale is inferred from one published width plus a camera-height check.
 - One walk per scene. No randomisation, no repeated seeds.
 
-## Run it
+## Run it (Part 1)
 
 ```bash
 scripts/setup.sh        # venv + unitree_rl_gym at a pinned commit (G1 model + policy)
@@ -88,12 +95,95 @@ scripts/setup.sh        # venv + unitree_rl_gym at a pinned commit (G1 model + p
 
 Render in foreground chunks. macOS throttled the same GPU job about 7× when it ran as a background process (6 s/frame vs 0.85 s/frame).
 
-## Credits and licences
+# Part 2: carrying a box ($1.27 of GPU)
+
+![The G1 lowers a 4 kg carton onto a second pallet stack](media/linden_carry_place.gif)
+
+Full run, 59 s, 4 kg: [`media/linden_carry.mp4`](media/linden_carry.mp4). The robot walks to a real pallet stack in the scan and lines up. It grips and lifts a carton, then carries it 8.7 m up the aisle (31 s holding it in all). It lines up at a second stack, lowers the carton and releases it. The carton ends flat on the stack top (0.0° tilt).
+
+## Result
+
+Each trial holds the arms in a box-carry pose with the payload split between the two palms. 50 trials per point, Wilson 95% bands in the figure.
+
+| Policy | Walk 15 s at 0.5 m/s, 3 shoves of 0.5 m/s | Stand still 10 s |
+|---|---|---|
+| Unitree's stock policy (`unitree_rl_gym`) | 48/50 at 0 kg; **0/50 from 2 kg on** | 50/50 at 0 kg (wanders 2.6 m), 3/50 at 2 kg, 0 after |
+| Same training as mine, no payload (control) | 50/50 at 0 kg; **0/50 from 2 kg on** | 50/50 at 0–2 kg (wanders 4.6 m at 2 kg), 0 after |
+| **Trained with 0–10 kg in the hands** | **50/50 at 0, 2, 4, 6 and 8 kg**; 0/50 at 10 kg | **50/50 at 0–6 kg** (wanders 0.15–0.75 m); 0/50 at 8–10 kg |
+
+![Success rate against payload, walking and standing](media/carry_success.png)
+
+Walking speed for the payload-trained policy drops from 0.53 m/s empty to 0.37 m/s at 8 kg, against the commanded 0.5. Every policy drifts 2–8°/s in heading when given a zero yaw command, because nothing closes the loop on heading. The demo's path follower closes it.
+
+## What I trained
+
+The base is [MuJoCo Playground's](https://github.com/google-deepmind/mujoco_playground) G1 joystick task (MJX on MuJoCo Warp, Brax PPO, Playground's own hyperparameters). I changed three things ([`train/carry_env.py`](train/carry_env.py)):
+
+- **The arms are not the policy's.** Each episode samples an arm pose: 25% arms down, 75% a mirrored box-carry pose. The 14 arm actuators track that pose whatever the policy outputs. The policy drives legs and waist.
+- **A hidden payload.** Each forearm gets a mass at the palm, half of M with M ~ U(0, 10) kg per environment, so the load goes through elbows and shoulders as a squeezed box's would. The actor never observes M; the critic does.
+- **A control run** with the identical setup and schedule and M = 0. Both runs got 200M steps, then +600M, then a +200M stand-still fine-tune: 1B steps each.
+
+Training ran on rented RTX 4090s, about 100k env-steps/s and roughly 17 minutes per 200M. Evaluation runs on the Mac in plain MuJoCo, not MJX. My observation code matches the training environment's to 3×10⁻⁸ ([`train/policy.py`](train/policy.py)).
+
+![Training curves for both runs](media/carry_training.png)
+
+## What went wrong, in order
+
+**The first policy fell whenever it was told to stand still: 0 of 50, even empty-handed.** That was my reward bug. Playground's stand-still penalty sums |q − default| over all 29 joints when the command is zero. I had taken the arms away from the policy and parked them in carry poses, so that penalty was about 2.4 rad of arm deviation the policy could never remove. Every reward is scaled by dt, so the penalty cost about −24 per 500-step stand segment. Terminating cost −2. Falling over was the cheaper option, and the policy found it. Restricting the penalty to the 15 joints the policy controls, plus a 200M-step fine-tune with 25% stand commands, took standing to 50/50 up to 6 kg. It cost something: walking with 10 kg went from 41/50 before the fine-tune to 0/50 after.
+
+**At 200M steps payload training had barely helped.** It managed 3/20 vs 0/20 at 4 kg. The training curve was still climbing, so both runs went to 800M on the same schedule. At 800M the payload policy managed 50/50 up to 6 kg and 41/50 at 10 kg. The control stayed at 0/50 from 4 kg on.
+
+**My first speed metric measured yaw drift.** I took distance along the starting heading over 15 s. The policy actually walked at 0.54 m/s but turned about 130° over the trial, so the metric read 0.23 m/s. It now reports forward speed in the robot's own frame plus heading drift as its own number.
+
+**Unitree's 29-joint G1 file leaves armature, damping and friction at 0** on every joint. The 12-joint file their policy was trained on uses 0.01 / 0.001 / 0.1. On the 29-joint model the stock policy fell in under a second even unloaded until I copied those values over. Its baseline above uses the corrected model.
+
+**Arm-pose randomisation alone buys about 2 kg, then loses it.** The control at 800M walked with 2 kg in 49/50 trials, the stock policy in 0/50. The only difference is that the control trained with random arm poses. The control's stand fine-tune then took that to 0/50.
+
+## The demo, and what it does not show
+
+The demo is a scripted task, one run, not a success rate ([`train/run_carry_demo.py`](train/run_carry_demo.py)). The trained policy drives the legs throughout. On top of it sit:
+
+- a path follower and a line-up controller;
+- an arm controller: IK limited to the arm-pose range the policy trained on, gravity and carried-load feed-forward, and a small windowed integral on palm height.
+
+Things to know:
+
+- **The grip is a weld.** Once both palms touch the carton, the carton is welded to them. I tried a pure friction grip with Playground's hands first. Their capsule colliders give two point contacts, which hinge, and the carton swung 24° pitch and 28° roll on them. Flat palm pads then slipped. The weld replaces only the friction. The 4 kg still hangs from the palms, and the policy balances it.
+- **The demo carries 4 kg.** At 5 kg it fell during the loaded carry, where it turns while walking. The benchmark only covers straight walking and standing.
+- **It picks from the higher stack (top 0.66 m) and places on the lower (0.557 m).** The other way round, the carried carton's underside hung below the 0.66 m top. It hit the stack's front face and the robot couldn't step in.
+- **Line-ups need slack.** The policy never fully stands still and under-follows small turn commands (about 0.4–0.7× commanded). Picking needs the robot within 6 cm and 5° of its spot; placing accepts 15 cm and drops the carton straight ahead of wherever the robot stands.
+- **The carton is a simulated object composited into the scan.** It is not one of the boxes in the capture, which are baked into the splat.
+
+## Run it (Part 2)
+
+```bash
+# training, on a CUDA box (see remote/): Playground + Brax, jax 0.9.2 (brax 0.14.2 needs < 0.10)
+uv pip install -r train/requirements.txt "jax[cuda12]==0.9.2"
+python train/train.py --max-payload 10 --out runs/payload10                     # 200M
+python train/train.py --max-payload 10 --seed 1 --timesteps 600000000 \
+       --restore runs/payload10/params.pkl --out runs/payload10_800M
+python train/train.py --max-payload 10 --seed 2 --timesteps 200000000 --p-stand 0.25 --stand-fix \
+       --restore runs/payload10_800M/params.pkl --out runs/payload10_1B
+# the control: the same three commands with --max-payload 0
+
+# evaluation and demo, on the Mac (CPU)
+python train/evaluate.py --policy runs/payload10_1B --protocol walk --trials 50
+python train/evaluate.py --policy runs/payload10_1B --protocol stand --trials 50
+python train/evaluate.py --policy unitree --protocol walk --trials 50
+python train/run_carry_demo.py --policy runs/payload10_1B --mass 4
+python scripts/render_carry.py --range 0 520     # ... in chunks, then --encode
+python scripts/figures_carry.py
+```
+
+The final policies are in `runs/payload10_1B/` and `runs/payload0_1B/`, as Brax params with their `meta.json`. Every number above is in `results/`.
+
+# Credits and licences
 
 - **Scenes:** Niantic Spatial, Places Library free samples (Leake Street Arches; Linden Warehouse Pallet Racks). The data isn't redistributed here; download it from Niantic. Renders of the scenes in `media/` are shown for demonstration.
 - **G1 model and walking policy:** [unitreerobotics/unitree_rl_gym](https://github.com/unitreerobotics/unitree_rl_gym), BSD-3-Clause, fetched by `scripts/setup.sh`.
 - **Splat rasteriser:** [metal-gauss](https://github.com/nandometzger/metal-gauss), MIT.
 - **Physics:** [MuJoCo](https://github.com/google-deepmind/mujoco), Apache-2.0.
+- **Training base for Part 2:** [MuJoCo Playground](https://github.com/google-deepmind/mujoco_playground) G1 joystick task and [Brax](https://github.com/google/brax) PPO, Apache-2.0; G1 model from [MuJoCo Menagerie](https://github.com/google-deepmind/mujoco_menagerie).
 - **Idea:** Tim Martin's Isaac Sim demo of the same pipeline.
 
 Code in this repository: MIT.
