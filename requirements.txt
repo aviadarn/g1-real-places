@@ -1,0 +1,12 @@
+mujoco==3.15.0
+numpy==2.5.3
+scipy==1.18.1
+torch==2.14.1
+metal-gauss==0.2.1
+msgpack==1.2.3
+usd-core==26.8
+imageio==2.38.0
+imageio-ffmpeg==0.6.0
+pillow==12.3.0
+matplotlib==3.11.2
+pytest==9.1.1

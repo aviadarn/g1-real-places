@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+data/
+scratch/
+third_party/
+.DS_Store
+MUJOCO_LOG.TXT
